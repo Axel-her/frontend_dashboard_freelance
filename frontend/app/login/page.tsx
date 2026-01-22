@@ -21,7 +21,7 @@ export default function LoginPage() {
       // Redirection vers le dashboard
       router.push("/dashboard");
     } catch (error: any) {
-      setErrorMessage(error.message);
+      setErrorMessage("Email ou mot de passe incorrect. Veuillez réessayer.");
     }
   }
 
@@ -30,7 +30,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-sm border">
         
         <h1 className="text-3xl font-bold text-center mb-8">
-          Bienvenue sur ton<br />Dashboard Freelance
+          Bienvenue sur ton Dashboard Freelance
         </h1>
 
         {errorMessage && (

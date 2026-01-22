@@ -1,6 +1,39 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { getDashboardData, DashboardData } from "@/services/missionService";
+
 export default function Dashboard() {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const dashboardData = await getDashboardData();
+        setData(dashboardData);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Chargement...</div>;
+  }
+
+  if (error) {
+    return <div className="min-h-screen flex items-center justify-center text-red-600">{error}</div>;
+  }
+
+  if (!data) {
+    return <div className="min-h-screen flex items-center justify-center">Aucune donnée disponible.</div>;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
 
@@ -13,19 +46,19 @@ export default function Dashboard() {
         {/* Revenu total */}
         <div className="bg-white p-6 rounded-xl shadow-sm border">
           <h2 className="text-gray-500 text-sm font-medium mb-2">Revenu total</h2>
-          <p className="text-3xl font-bold">12 500 €</p>
+          <p className="text-3xl font-bold">{data.totalRevenue.toLocaleString()} €</p>
         </div>
 
         {/* Nombre de missions */}
         <div className="bg-white p-6 rounded-xl shadow-sm border">
           <h2 className="text-gray-500 text-sm font-medium mb-2">Missions</h2>
-          <p className="text-3xl font-bold">8</p>
+          <p className="text-3xl font-bold">{data.numberOfMissions}</p>
         </div>
 
         {/* Clients */}
         <div className="bg-white p-6 rounded-xl shadow-sm border">
           <h2 className="text-gray-500 text-sm font-medium mb-2">Clients</h2>
-          <p className="text-3xl font-bold">5</p>
+          <p className="text-3xl font-bold">{data.numberOfClients}</p>
         </div>
 
       </div>
@@ -46,31 +79,19 @@ export default function Dashboard() {
         <h2 className="text-xl font-semibold mb-4">Dernières missions</h2>
 
         <div className="space-y-4">
-
-          <div className="p-4 border rounded-lg flex justify-between">
-            <div>
-              <p className="font-medium text-lg">Refonte site vitrine</p>
-              <p className="text-gray-500 text-sm">Client : ACME Corp</p>
-            </div>
-            <p className="font-semibold">2 800 €</p>
-          </div>
-
-          <div className="p-4 border rounded-lg flex justify-between">
-            <div>
-              <p className="font-medium text-lg">Dashboard interne</p>
-              <p className="text-gray-500 text-sm">Client : Nexa</p>
-            </div>
-            <p className="font-semibold">1 900 €</p>
-          </div>
-
-          <div className="p-4 border rounded-lg flex justify-between">
-            <div>
-              <p className="font-medium text-lg">Automatisation CRM</p>
-              <p className="text-gray-500 text-sm">Client : Brixio</p>
-            </div>
-            <p className="font-semibold">1 300 €</p>
-        </div>
-
+          {data.latestMissions.length === 0 ? (
+            <p className="text-gray-500">Aucune mission trouvée.</p>
+          ) : (
+            data.latestMissions.map((mission) => (
+              <div key={mission.id} className="p-4 border rounded-lg flex justify-between">
+                <div>
+                  <p className="font-medium text-lg">{mission.title}</p>
+                  <p className="text-gray-500 text-sm">Client : {mission.client}</p>
+                </div>
+                <p className="font-semibold">{(mission.tjm * mission.duree).toLocaleString()} €</p>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
