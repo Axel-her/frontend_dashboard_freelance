@@ -9,6 +9,7 @@ export interface Mission {
   tjm: number;
   duree: number;
   client: string;
+  startDate?: string;
   userId: number;
   createdAt: string;
   updatedAt: string;
@@ -35,5 +36,22 @@ export async function getDashboardData(): Promise<DashboardData> {
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || "Erreur lors de la récupération des données du dashboard");
+  }
+}
+
+export async function createMission(missionData: Omit<Mission, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<Mission> {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      throw new Error("No token found");
+    }
+    const response = await axios.post(`${API_URL}/missions`, missionData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Erreur lors de la création de la mission");
   }
 }
