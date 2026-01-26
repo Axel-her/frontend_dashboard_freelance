@@ -25,3 +25,37 @@ export async function loginRequest(email: string, password: string) {
     );
   }
 }
+
+export async function registerRequest(email: string, password: string, nom: string, prenom: string) {
+  try {
+    const response = await axios.post(`${API_URL}/users`, {
+      email,
+      password,
+      nom,
+      prenom,
+    });
+    return response.data;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message || "Erreur lors de l'inscription"
+    );
+  }
+}
+
+export async function getUserProfile() {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.get(`${API_URL}/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message || "Erreur lors de la récupération du profil"
+    );
+  }
+}

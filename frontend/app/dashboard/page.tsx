@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { getDashboardData, createMission, getMissionsPaginated, updateMission, deleteMission, getAvailableYears, DashboardData, PaginatedMissions, Mission } from "@/services/missionService";
+import { getUserProfile } from "@/services/authService";
+import { useRouter } from "next/navigation";
 
 interface MissionFormData {
   title: string;
@@ -10,6 +12,13 @@ interface MissionFormData {
   duree: number;
   client: string;
   startDate: string;
+}
+
+interface User {
+  id: number;
+  email: string;
+  nom: string;
+  prenom: string;
 }
 
 export default function Dashboard() {
@@ -23,6 +32,7 @@ export default function Dashboard() {
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const [formData, setFormData] = useState<MissionFormData>({
     title: '',
     description: '',
@@ -32,12 +42,18 @@ export default function Dashboard() {
     startDate: '',
   });
 
+  const router = useRouter();
+
   const fetchData = async () => {
     try {
       const dashboardData = await getDashboardData();
       setData(dashboardData);
     } catch (err: any) {
-      setError(err.message);
+      if (err.response?.status === 401) {
+        setError("Unauthorized");
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -49,7 +65,11 @@ export default function Dashboard() {
       setMissionsData(missions);
       setCurrentPage(page);
     } catch (err: any) {
-      setError(err.message);
+      if (err.response?.status === 401) {
+        setError("Unauthorized");
+      } else {
+        setError(err.message);
+      }
     }
   };
 
@@ -58,15 +78,37 @@ export default function Dashboard() {
       const years = await getAvailableYears();
       setAvailableYears(years);
     } catch (err: any) {
-      // Ne pas afficher d'erreur si on ne peut pas récupérer les années
-      console.error("Erreur lors de la récupération des années:", err);
+      if (err.response?.status === 401) {
+        setError("Unauthorized");
+      } else {
+        console.error("Erreur lors de la récupération des années:", err);
+      }
+    }
+  };
+
+  const fetchUser = async () => {
+    try {
+      const userData = await getUserProfile();
+      setUser(userData);
+    } catch (err: any) {
+      if (err.response?.status === 401) {
+        setError("Unauthorized");
+      } else {
+        console.error("Erreur lors de la récupération du profil:", err);
+      }
     }
   };
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/login");
+      return;
+    }
     fetchData();
     fetchMissions();
     fetchAvailableYears();
+    fetchUser();
   }, []);
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -173,6 +215,11 @@ export default function Dashboard() {
     fetchMissions(1, year);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    router.push("/login");
+  };
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Chargement...</div>;
   }
@@ -189,7 +236,29 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-50 p-8">
 
       {/* Titre */}
-      <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
+      <div className="flex items-center justify-between mb-8">
+
+        <h1 className="text-3xl font-bold">
+          Dashboard{user ? ` - ${user.prenom} ${user.nom}` : ''}
+        </h1>
+
+        <button
+          onClick={handleLogout}
+          title="Se déconnecter"
+          className="
+            w-11 h-11 rounded-full
+            flex items-center justify-center
+            border-2 border-black
+            transition
+            hover:ring-2 hover:ring-black hover:ring-offset-2 hover:ring-offset-gray-50
+            hover:scale-105 active:scale-95
+          "
+        >
+          ⏻
+        </button>
+
+      </div>
+
 
       {/* Cartes statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
