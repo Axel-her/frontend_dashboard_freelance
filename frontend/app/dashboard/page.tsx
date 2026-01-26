@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getDashboardData, createMission, DashboardData } from "@/services/missionService";
+import { getDashboardData, createMission, getMissionsPaginated, updateMission, deleteMission, getAvailableYears, DashboardData, PaginatedMissions, Mission } from "@/services/missionService";
 
 interface MissionFormData {
   title: string;
@@ -14,9 +14,15 @@ interface MissionFormData {
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [missionsData, setMissionsData] = useState<PaginatedMissions | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [editingMission, setEditingMission] = useState<Mission | null>(null);
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<MissionFormData>({
     title: '',
     description: '',
@@ -37,30 +43,116 @@ export default function Dashboard() {
     }
   };
 
+  const fetchMissions = async (page: number = 1, year?: number | null) => {
+    try {
+      const missions = await getMissionsPaginated(page, 10, year || undefined);
+      setMissionsData(missions);
+      setCurrentPage(page);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const fetchAvailableYears = async () => {
+    try {
+      const years = await getAvailableYears();
+      setAvailableYears(years);
+    } catch (err: any) {
+      // Ne pas afficher d'erreur si on ne peut pas récupérer les années
+      console.error("Erreur lors de la récupération des années:", err);
+    }
+  };
+
   useEffect(() => {
     fetchData();
+    fetchMissions();
+    fetchAvailableYears();
   }, []);
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return; // Prevent double submission
+
+    setIsSubmitting(true);
     try {
-      await createMission({
-        ...formData,
-        startDate: formData.startDate ? new Date(formData.startDate).toISOString() : undefined,
-      });
+      if (editingMission) {
+        // Mode édition
+        await updateMission(editingMission.id, {
+          ...formData,
+          startDate: formData.startDate ? new Date(formData.startDate).toISOString() : undefined,
+        });
+      } else {
+        // Mode ajout
+        await createMission({
+          ...formData,
+          startDate: formData.startDate ? new Date(formData.startDate).toISOString() : undefined,
+        });
+      }
       setShowForm(false);
-      setFormData({
-        title: '',
-        description: '',
-        tjm: 0,
-        duree: 0,
-        client: '',
-        startDate: '',
-      });
-      await fetchData(); // Refresh data
+      resetForm();
+      await fetchData(); // Refresh dashboard data
+      await fetchMissions(currentPage, selectedYear); // Refresh missions
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleDeleteMission = async () => {
+    if (!editingMission || isSubmitting) return;
+    
+    setIsSubmitting(true);
+    try {
+      await deleteMission(editingMission.id);
+      setShowForm(false);
+      resetForm();
+      await fetchData(); // Refresh dashboard data
+      
+      // Vérifier si on doit revenir à la page précédente
+      const newTotal = (missionsData?.total || 1) - 1;
+      const newTotalPages = Math.ceil(newTotal / 10);
+      if (currentPage > newTotalPages && newTotalPages > 0) {
+        setCurrentPage(newTotalPages);
+      } else {
+        await fetchMissions(currentPage, selectedYear); // Refresh missions
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      tjm: 0,
+      duree: 0,
+      client: '',
+      startDate: '',
+    });
+    setEditingMission(null);
+    setIsSubmitting(false);
+  };
+
+  const openAddForm = () => {
+    resetForm();
+    setShowForm(true);
+  };
+
+  const openEditForm = (mission: Mission) => {
+    setEditingMission(mission);
+    setFormData({
+      title: mission.title,
+      description: mission.description || '',
+      tjm: mission.tjm,
+      duree: mission.duree,
+      client: mission.client,
+      startDate: mission.startDate ? new Date(mission.startDate).toISOString().split('T')[0] : '',
+    });
+    setShowForm(true);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -69,6 +161,16 @@ export default function Dashboard() {
       ...prev,
       [name]: name === 'tjm' || name === 'duree' ? Number(value) : value,
     }));
+  };
+
+  const handlePageChange = (page: number) => {
+    fetchMissions(page, selectedYear);
+  };
+
+  const handleYearChange = (year: number | null) => {
+    setSelectedYear(year);
+    setCurrentPage(1); // Reset to first page when changing filter
+    fetchMissions(1, year);
   };
 
   if (loading) {
@@ -108,7 +210,7 @@ export default function Dashboard() {
               className="w-8 h-8 rounded-full bg-white-600 text-black flex items-center justify-center text-xl font-bold
              border-2 border-black transition hover:ring-2 hover:ring-black hover:ring-offset-2 hover:ring-offset-white hover:scale-105 active:scale-95"
               title="Ajouter une mission"
-              onClick={() => setShowForm(true)}
+              onClick={openAddForm}
             >
               +
             </button>
@@ -126,85 +228,104 @@ export default function Dashboard() {
         </div>
 
       </div>
-    
-
-      {/* Section graphique / résumé */}
-      <div className="bg-white p-6 rounded-xl border shadow-sm mb-10">
-        <h2 className="text-xl font-semibold mb-4">Revenus du mois</h2>
-        
-        {/* Placeholder pour futur graphique */}
-        <div className="h-40 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
-          Graphique (à venir)
-        </div>
-      </div>
 
       {/* Formulaire ajout mission */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl shadow-lg max-w-md w-full mx-4">
-            <h2 className="text-xl font-semibold mb-4">Ajouter une mission</h2>
+            <h2 className="text-xl font-semibold mb-4">
+              {editingMission ? 'Modifier la mission' : 'Ajouter une mission'}
+            </h2>
             <form onSubmit={handleFormSubmit} className="space-y-4">
-              <input
-                type="text"
-                name="title"
-                placeholder="Titre"
-                value={formData.title}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border rounded-lg"
-                required
-              />
-              <textarea
-                name="description"
-                placeholder="Description"
-                value={formData.description}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border rounded-lg"
-              />
-              <input
-                type="number"
-                name="tjm"
-                placeholder="TJM (€)"
-                value={formData.tjm}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border rounded-lg"
-                required
-              />
-              <input
-                type="number"
-                name="duree"
-                placeholder="Durée (jours)"
-                value={formData.duree}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border rounded-lg"
-                required
-              />
-              <input
-                type="text"
-                name="client"
-                placeholder="Client"
-                value={formData.client}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border rounded-lg"
-                required
-              />
-              <input
-                type="date"
-                name="startDate"
-                value={formData.startDate}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border rounded-lg"
-              />
+              <div>
+                <label className="block text-sm font-medium mb-1">Titre</label>
+                <input 
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">TJM (€)</label>
+                <input
+                  type="number"
+                  name="tjm"
+                  value={formData.tjm}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Durée (jours)</label>
+                <input
+                  type="number"
+                  name="duree"
+                  value={formData.duree}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Client</label>
+                <input
+                  type="text"
+                  name="client"
+                  value={formData.client}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Date de début</label>
+                <input
+                  type="date"
+                  name="startDate"
+                  value={formData.startDate}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
               <div className="flex space-x-2">
                 <button
                   type="submit"
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg"
+                  disabled={isSubmitting}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-2 rounded-lg disabled:cursor-not-allowed"
                 >
-                  Ajouter
+                  {isSubmitting ? 'En cours...' : (editingMission ? 'Modifier' : 'Ajouter')}
                 </button>
+                {editingMission && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteMission}
+                    disabled={isSubmitting}
+                    className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white py-2 rounded-lg disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? 'Suppression...' : 'Supprimer'}
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => setShowForm(false)}
-                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-black py-2 rounded-lg"
+                  onClick={() => {
+                    setShowForm(false);
+                    resetForm();
+                  }}
+                  disabled={isSubmitting}
+                  className="flex-1 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 text-black py-2 rounded-lg disabled:cursor-not-allowed"
                 >
                   Annuler
                 </button>
@@ -216,14 +337,37 @@ export default function Dashboard() {
 
       {/* Dernières missions */}
       <div className="bg-white p-6 rounded-xl border shadow-sm">
-        <h2 className="text-xl font-semibold mb-4">Missions </h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">
+            Toutes les missions  :
+          </h2>
+          
+          {/* Filtre par année */}
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-medium">Filtrer par année:</label>
+            <select
+              value={selectedYear || ''}
+              onChange={(e) => handleYearChange(e.target.value ? parseInt(e.target.value) : null)}
+              className="px-3 py-1 border rounded-lg text-sm"
+            >
+              <option value="">Toutes les années</option>
+              {availableYears.map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
+        </div>
 
         <div className="space-y-4">
-          {data.latestMissions.length === 0 ? (
+          {missionsData && missionsData.missions.length === 0 ? (
             <p className="text-gray-500">Aucune mission trouvée.</p>
           ) : (
-            data.latestMissions.map((mission) => (
-              <div key={mission.id} className="p-4 border rounded-lg flex justify-between">
+            missionsData?.missions.map((mission) => (
+              <div 
+                key={mission.id} 
+                className="p-4 border rounded-lg flex justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => openEditForm(mission)}
+              >
                 <div>
                   <p className="font-medium text-lg">{mission.title}</p>
                   <p className="text-gray-500 text-sm">Client : {mission.client}</p>
@@ -236,6 +380,29 @@ export default function Dashboard() {
             ))
           )}
         </div>
+
+        {/* Pagination */}
+        {missionsData && missionsData.totalPages > 1 && (
+          <div className="flex justify-center items-center mt-6 space-x-2">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+            >
+              Précédent
+            </button>
+            <span className="text-sm">
+              Page {currentPage} sur {missionsData.totalPages}
+            </span>
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === missionsData.totalPages}
+              className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+            >
+              Suivant
+            </button>
+          </div>
+        )}
       </div>
 
     </div>
