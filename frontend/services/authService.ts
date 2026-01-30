@@ -8,8 +8,6 @@ export async function loginRequest(email: string, password: string) {
       email,
       password,
     });
-    console.log("Requête envoyée au backend avec :", { email, password }); // <--- AJOUT
-    console.log("Réponse backend :", response.data); // <--- AJOUT
     // On récupère le token
     const token = response.data.access_token;
 
