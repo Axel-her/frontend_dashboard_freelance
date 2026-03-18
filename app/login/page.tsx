@@ -80,6 +80,12 @@ export default function LoginPage() {
             className="w-full bg-blue-600 hover:bg-blue-700 transition text-white py-3 rounded-lg text-lg font-medium mt-2"            onClick={() => router.push('/register')}          >
             Créer un compte
           </button>
+          <button
+            className="w-full bg-gray-600 hover:bg-gray-700 transition text-white py-3 rounded-lg text-lg font-medium mt-2"
+            onClick={() => router.push('/demo')}
+          >
+            Mode démo
+          </button>
         </div>
       </div>
     </div>

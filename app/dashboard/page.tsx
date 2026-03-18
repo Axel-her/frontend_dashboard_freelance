@@ -33,6 +33,7 @@ export default function Dashboard() {
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [formData, setFormData] = useState<MissionFormData>({
     title: '',
     description: '',
@@ -44,9 +45,9 @@ export default function Dashboard() {
 
   const router = useRouter();
 
-  const fetchData = async () => {
+  const fetchData = async (year?: number | null) => {
     try {
-      const dashboardData = await getDashboardData();
+      const dashboardData = await getDashboardData(year || undefined);
       setData(dashboardData);
     } catch (err: any) {
       if (err.response?.status === 401) {
@@ -105,11 +106,29 @@ export default function Dashboard() {
       router.push("/login");
       return;
     }
-    fetchData();
+    fetchData(selectedYear);
     fetchMissions();
     fetchAvailableYears();
     fetchUser();
   }, []);
+
+  // Fermer le menu utilisateur quand on clique ailleurs
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.user-menu-container')) {
+        setShowUserMenu(false);
+      }
+    };
+
+    if (showUserMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showUserMenu]);
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,7 +151,7 @@ export default function Dashboard() {
       }
       setShowForm(false);
       resetForm();
-      await fetchData(); // Refresh dashboard data
+      await fetchData(selectedYear); // Refresh dashboard data
       await fetchMissions(currentPage, selectedYear); // Refresh missions
     } catch (err: any) {
       setError(err.message);
@@ -149,7 +168,7 @@ export default function Dashboard() {
       await deleteMission(editingMission.id);
       setShowForm(false);
       resetForm();
-      await fetchData(); // Refresh dashboard data
+      await fetchData(selectedYear); // Refresh dashboard data
       
       // Vérifier si on doit revenir à la page précédente
       const newTotal = (missionsData?.total || 1) - 1;
@@ -212,12 +231,18 @@ export default function Dashboard() {
   const handleYearChange = (year: number | null) => {
     setSelectedYear(year);
     setCurrentPage(1); // Reset to first page when changing filter
+    fetchData(year);
     fetchMissions(1, year);
   };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     router.push("/login");
+  };
+
+  const handleProfileClick = () => {
+    setShowUserMenu(false);
+    router.push("/profile");
   };
 
   if (loading) {
@@ -242,20 +267,44 @@ export default function Dashboard() {
           Dashboard{user ? ` - ${user.prenom} ${user.nom}` : ''}
         </h1>
 
-        <button
-          onClick={handleLogout}
-          title="Se déconnecter"
-          className="
-            w-11 h-11 rounded-full
-            flex items-center justify-center
-            border-2 border-black
-            transition
-            hover:ring-2 hover:ring-black hover:ring-offset-2 hover:ring-offset-gray-50
-            hover:scale-105 active:scale-95
-          "
-        >
-          ⏻
-        </button>
+        <div className="relative user-menu-container">
+          <button
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            title="Menu utilisateur"
+            className="
+              w-11 h-11 rounded-full
+              flex flex-col items-center justify-center
+              border-2 border-black
+              transition
+              hover:ring-2 hover:ring-black hover:ring-offset-2 hover:ring-offset-gray-50
+              hover:scale-105 active:scale-95
+              gap-1
+            "
+          >
+            <span className="block w-5 h-0.5 bg-black"></span>
+            <span className="block w-5 h-0.5 bg-black"></span>
+            <span className="block w-5 h-0.5 bg-black"></span>
+          </button>
+
+          {showUserMenu && (
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-50">
+              <div className="py-1">
+                <button
+                  onClick={handleProfileClick}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  Profil
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  Se déconnecter
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
       </div>
 
@@ -369,6 +418,9 @@ export default function Dashboard() {
                   className="w-full px-3 py-2 border rounded-lg"
                 />
               </div>
+              <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
+                  <p className="font-medium">Revenu estimé : {(formData.tjm * formData.duree).toLocaleString()} €</p>
+                </div>
               <div className="flex space-x-2">
                 <button
                   type="submit"

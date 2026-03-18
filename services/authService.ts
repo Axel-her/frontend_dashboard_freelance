@@ -57,3 +57,41 @@ export async function getUserProfile() {
     );
   }
 }
+
+export async function updateUserProfile(email?: string, nom?: string, prenom?: string, password?: string) {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.patch(`${API_URL}/users`, {
+      email,
+      nom,
+      prenom,
+      password,
+    }, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message || "Erreur lors de la mise à jour du profil"
+    );
+  }
+}
+
+export async function deleteUserAccount() {
+  try {
+    const token = localStorage.getItem("token");
+    await axios.delete(`${API_URL}/users`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.message || "Erreur lors de la suppression du compte"
+    );
+  }
+}

@@ -22,13 +22,15 @@ export interface DashboardData {
   latestMissions: Mission[];
 }
 
-export async function getDashboardData(): Promise<DashboardData> {
+export async function getDashboardData(year?: number): Promise<DashboardData> {
   try {
     const token = localStorage.getItem("token");
     if (!token) {
       throw new Error("No token found");
     }
-    const response = await axios.get(`${API_URL}/missions/dashboard`, {
+    const params = year ? new URLSearchParams({ year: year.toString() }) : '';
+    const url = `${API_URL}/missions/dashboard${params ? `?${params}` : ''}`;
+    const response = await axios.get(url, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

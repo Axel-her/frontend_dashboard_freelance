@@ -168,90 +168,92 @@ export default function ProfilePage() {
       </div>
 
       {/* Carte profil */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border max-w-2xl">
-        {!isEditing ? (
-          /* Vue lecture */
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-gray-500">Email</label>
-              <p className="text-lg">{user.email}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Nom</label>
-              <p className="text-lg">{user.nom}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Prénom</label>
-              <p className="text-lg">{user.prenom}</p>
-            </div>
+      <div className="w-full flex justify-center mt-6">
+        <div className="bg-white p-6 rounded-xl shadow-sm border max-w-2xl w-full">
+          {!isEditing ? (
+            /* Vue lecture */
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">Email</label>
+                <p className="text-lg">{user.email}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Nom</label>
+                <p className="text-lg">{user.nom}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Prénom</label>
+                <p className="text-lg">{user.prenom}</p>
+              </div>
 
-            <div className="flex space-x-3 mt-6">
-              <button
-                onClick={() => setIsEditing(true)}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition"
-              >
-                Modifier
-              </button>
-              <button
-                onClick={handleDeleteClick}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg font-medium transition"
-              >
-                Supprimer le compte
-              </button>
+              <div className="flex space-x-3 mt-6">
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition"
+                >
+                  Modifier
+                </button>
+                <button
+                  onClick={handleDeleteClick}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg font-medium transition"
+                >
+                  Supprimer le compte
+                </button>
+              </div>
             </div>
-          </div>
-        ) : (
-          /* Vue édition */
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Email</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Nom</label>
-              <input
-                type="text"
-                name="nom"
-                value={formData.nom}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Prénom</label>
-              <input
-                type="text"
-                name="prenom"
-                value={formData.prenom}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300"
-              />
-            </div>
+          ) : (
+            /* Vue édition */
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Nom</label>
+                <input
+                  type="text"
+                  name="nom"
+                  value={formData.nom}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Prénom</label>
+                <input
+                  type="text"
+                  name="prenom"
+                  value={formData.prenom}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300"
+                />
+              </div>
 
-            <div className="flex space-x-3 mt-6">
-              <button
-                onClick={handleSaveClick}
-                disabled={isSaving}
-                className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white py-2 px-4 rounded-lg font-medium transition disabled:cursor-not-allowed"
-              >
-                {isSaving ? "Enregistrement..." : "Enregistrer"}
-              </button>
-              <button
-                onClick={() => setIsEditing(false)}
-                disabled={isSaving}
-                className="flex-1 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 text-black py-2 px-4 rounded-lg font-medium transition disabled:cursor-not-allowed"
-              >
-                Annuler
-              </button>
+              <div className="flex space-x-3 mt-6">
+                <button
+                  onClick={handleSaveClick}
+                  disabled={isSaving}
+                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white py-2 px-4 rounded-lg font-medium transition disabled:cursor-not-allowed"
+                >
+                  {isSaving ? "Enregistrement..." : "Enregistrer"}
+                </button>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  disabled={isSaving}
+                  className="flex-1 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 text-black py-2 px-4 rounded-lg font-medium transition disabled:cursor-not-allowed"
+                >
+                  Annuler
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Modal confirmation sauvegarde */}
